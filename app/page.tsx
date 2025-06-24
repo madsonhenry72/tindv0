@@ -20,7 +20,6 @@ import {
   CheckCircle,
   X,
   Upload,
-  Mail,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -28,7 +27,7 @@ import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { useGeolocation } from "@/hooks/useGeolocation"
 
-type AppStep = "landing" | "form" | "verification" | "preliminary" | "generating" | "result" | "email" | "offer"
+type AppStep = "landing" | "form" | "verification" | "preliminary" | "generating" | "result" | "offer"
 
 // Updated sales proof messages without specific cities/states
 const SalesProofPopup = ({ show, onClose }: { show: boolean; onClose: () => void }) => {
@@ -265,37 +264,28 @@ export default function SigiloX() {
         label: "Config",
         fullLabel: "Configuration",
         mobileLabel: "Config",
-        completed: ["form", "verification", "preliminary", "generating", "result", "email", "offer"].includes(
-          currentStep,
-        ),
+        completed: ["form", "verification", "preliminary", "generating", "result", "offer"].includes(currentStep),
       },
       {
         id: "verification",
         label: "Verif",
         fullLabel: "Verification",
         mobileLabel: "Verif",
-        completed: ["verification", "preliminary", "generating", "result", "email", "offer"].includes(currentStep),
+        completed: ["verification", "preliminary", "generating", "result", "offer"].includes(currentStep),
       },
       {
         id: "preliminary",
         label: "Result",
         fullLabel: "Result",
         mobileLabel: "Resultado",
-        completed: ["preliminary", "generating", "result", "email", "offer"].includes(currentStep),
+        completed: ["preliminary", "generating", "result", "offer"].includes(currentStep),
       },
       {
         id: "generating",
         label: "Relat",
         fullLabel: "Report",
         mobileLabel: "Relatório",
-        completed: ["generating", "result", "email", "offer"].includes(currentStep),
-      },
-      {
-        id: "email",
-        label: "Email",
-        fullLabel: "Email",
-        mobileLabel: "Email",
-        completed: ["email", "offer"].includes(currentStep),
+        completed: ["generating", "result", "offer"].includes(currentStep),
       },
       {
         id: "offer",
@@ -310,7 +300,7 @@ export default function SigiloX() {
 
   // Timer countdown
   useEffect(() => {
-    if (currentStep === "result" || currentStep === "email" || currentStep === "offer") {
+    if (currentStep === "result" || currentStep === "offer") {
       const timer = setInterval(() => {
         setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0))
       }, 1000)
@@ -396,12 +386,7 @@ export default function SigiloX() {
 
   // Updated sales proof effect - now includes generating step
   useEffect(() => {
-    if (
-      currentStep === "generating" ||
-      currentStep === "result" ||
-      currentStep === "email" ||
-      currentStep === "offer"
-    ) {
+    if (currentStep === "generating" || currentStep === "result" || currentStep === "offer") {
       const showProof = () => {
         if (Math.random() < 0.7) {
           setShowSalesProof(true)
@@ -648,13 +633,9 @@ export default function SigiloX() {
 
       {/* Sales Proof Popup - Dynamic Social Proof */}
       <AnimatePresence>
-        {showSalesProof &&
-          (currentStep === "generating" ||
-            currentStep === "result" ||
-            currentStep === "email" ||
-            currentStep === "offer") && (
-            <SalesProofPopup show={showSalesProof} onClose={() => setShowSalesProof(false)} />
-          )}
+        {showSalesProof && (currentStep === "generating" || currentStep === "result" || currentStep === "offer") && (
+          <SalesProofPopup show={showSalesProof} onClose={() => setShowSalesProof(false)} />
+        )}
       </AnimatePresence>
 
       <div className={currentStep !== "landing" ? "pt-16 sm:pt-20" : ""}>
@@ -1103,8 +1084,7 @@ export default function SigiloX() {
                             <button
                               type="button"
                               onClick={() => setShowCountryDropdown(!showCountryDropdown)}
-                              className="bg-gray-100 px-3 sm:px-4 py-2 sm:py-3 rounded-xl border text-gray-600 flex-shrink-0 font-medium text-sm sm:text-base flex items-center gap-2 hover:bg-gray-200 transition-colors duration-200 min-w-[80px] sm:min-w-[9
-0px]"
+                              className="bg-gray-100 px-3 sm:px-4 py-2 sm:py-3 rounded-xl border text-gray-600 flex-shrink-0 font-medium text-sm sm:text-base flex items-center gap-2 hover:bg-gray-200 transition-colors duration-200 min-w-[80px] sm:min-w-[90px]"
                             >
                               <span className="text-lg">{selectedCountry.flag}</span>
                               <span>{selectedCountry.code}</span>
@@ -1483,7 +1463,7 @@ export default function SigiloX() {
 
                     <Button
                       onClick={() => setCurrentStep("generating")}
-                      className="w-full bg-gradient-to-r from-[#FF0066] to-[#FF3333] hover:from-[#FF0066] hover:to-[#FF3333] text-white font-bold py-3 sm:py-4 text-base sm:text-lg rounded-xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 touch-manipulation"
+                      className="w-full bg-gradient-to-r from-[#FF0066] to-[#FF3333] hover:from-[#FF0066] hover:to-[#FF3333] text-white font-bold py-3 sm:py-4 text-base sm:text-lg rounded-xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
                     >
                       📊 GENERATE INTERACTIVE REPORT
                     </Button>
@@ -1724,7 +1704,10 @@ export default function SigiloX() {
                     </div>
 
                     <Button
-                      onClick={() => setCurrentStep("email")}
+                      onClick={() => {
+                        // Scroll to bottom of page where email capture is
+                        window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" })
+                      }}
                       className="w-full bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white font-bold py-2 sm:py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 touch-manipulation"
                     >
                       👁️ VIEW COMPLETE PHOTOS NOW
@@ -1831,7 +1814,7 @@ export default function SigiloX() {
                   </CardContent>
                 </Card>
 
-                {/* CTA - Email Capture */}
+                {/* CTA - Email Capture Integrated */}
                 <div className="text-center">
                   <h3 className="text-lg sm:text-xl font-bold text-[#333333] mb-2 sm:mb-3">
                     UNLOCK THE COMPLETE REPORT
@@ -1839,143 +1822,40 @@ export default function SigiloX() {
                   <p className="text-sm text-gray-600 mb-4 sm:mb-6">
                     See photos, conversations and exact location of the profile.
                   </p>
-                  <Button
-                    onClick={() => setCurrentStep("email")}
-                    className="bg-gradient-to-r from-[#FF0066] to-[#FF3333] hover:from-[#FF0066] hover:to-[#FF3333] text-white font-bold py-3 sm:py-4 px-6 sm:px-8 text-base sm:text-lg rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 w-full touch-manipulation"
-                  >
-                    🔓 UNLOCK REPORT NOW
-                  </Button>
-                  <p className="text-xs text-gray-500 mt-4 font-medium">Limited time offer only.</p>
-                </div>
-              </div>
-            </motion.div>
-          )}
 
-          {/* Email Capture Step */}
-          {currentStep === "email" && (
-            <motion.div
-              key="email"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="min-h-screen bg-gradient-to-br from-[#FF3B30] to-[#FF0066] relative overflow-hidden"
-            >
-              {/* Floating hearts - Reduced for mobile */}
-              <div className="absolute inset-0">
-                {[...Array(10)].map((_, i) => (
-                  <motion.div
-                    key={i}
-                    className="absolute w-4 h-4 bg-white rounded-full opacity-20"
-                    style={{
-                      left: `${Math.random() * 100}%`,
-                      top: `${Math.random() * 100}%`,
-                    }}
-                    animate={{
-                      scale: [1, 1.5, 1],
-                      opacity: [0.2, 0.6, 0.2],
-                      y: [0, -20, 0],
-                    }}
-                    transition={{
-                      duration: 3 + Math.random() * 2,
-                      repeat: Number.POSITIVE_INFINITY,
-                      delay: Math.random() * 2,
-                    }}
-                  />
-                ))}
-              </div>
-
-              <div className="relative z-10 container mx-auto px-4 py-6 sm:py-8 flex items-center justify-center min-h-screen">
-                <div className="w-full max-w-lg">
-                  {/* Header */}
-                  <div className="text-center mb-6 sm:mb-8">
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-2xl">
-                      <Mail className="w-8 h-8 sm:w-10 sm:h-10 text-[#FF0066]" />
-                    </div>
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-3 sm:mb-4">
-                      📧 SECURE YOUR REPORT ACCESS
-                    </h1>
-                    <p className="text-gray-200 text-sm sm:text-base px-4 leading-relaxed">
-                      Enter your email to receive secure access to the complete report with all matches, photos and
-                      conversations.
+                  {/* Email Input */}
+                  <div className="mb-4 sm:mb-6">
+                    <Input
+                      type="email"
+                      placeholder="Enter your email to unlock report"
+                      value={userEmail}
+                      onChange={(e) => setUserEmail(e.target.value)}
+                      className="rounded-xl border-2 border-gray-200 focus:border-[#FF0066] transition-colors duration-200 py-3 sm:py-4 px-4 sm:px-6 text-sm sm:text-base w-full max-w-md mx-auto"
+                    />
+                    <p className="text-xs sm:text-sm text-gray-500 mt-2 font-medium">
+                      We'll send you secure access to view the complete report
                     </p>
                   </div>
 
-                  {/* Email Form */}
-                  <Card className="bg-white rounded-2xl shadow-lg border-0">
-                    <CardContent className="p-4 sm:p-8 space-y-6 sm:space-y-8">
-                      {/* Timer */}
-                      <div className="bg-red-100 border-2 border-red-400 rounded-2xl p-4 text-center">
-                        <div className="flex items-center justify-center gap-2 mb-2">
-                          <AlertTriangle className="w-5 h-5 text-red-600 animate-bounce" />
-                          <span className="font-bold text-red-800">REPORT EXPIRES IN:</span>
-                        </div>
-                        <div className="text-2xl font-bold text-red-600">{formatTime(timeLeft)}</div>
+                  <Button
+                    onClick={submitEmail}
+                    disabled={!userEmail || !userEmail.includes("@") || isSubmittingEmail}
+                    className={`w-full max-w-md py-3 sm:py-4 px-6 sm:px-8 text-base sm:text-lg font-bold rounded-2xl transition-all duration-300 touch-manipulation ${
+                      userEmail && userEmail.includes("@") && !isSubmittingEmail
+                        ? "bg-gradient-to-r from-[#FF0066] to-[#FF3333] hover:from-[#FF0066] hover:to-[#FF3333] text-white shadow-xl hover:shadow-2xl transform hover:scale-105"
+                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    }`}
+                  >
+                    {isSubmittingEmail ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        UNLOCKING REPORT...
                       </div>
-
-                      {/* Email Input */}
-                      <div>
-                        <label className="block text-sm sm:text-base font-semibold text-[#333333] mb-2 sm:mb-3">
-                          Email Address
-                        </label>
-                        <Input
-                          type="email"
-                          placeholder="your.email@example.com"
-                          value={userEmail}
-                          onChange={(e) => setUserEmail(e.target.value)}
-                          className="rounded-xl border-2 border-gray-200 focus:border-[#FF0066] transition-colors duration-200 py-2 sm:py-3 px-3 sm:px-4 text-sm sm:text-base"
-                        />
-                        <p className="text-xs sm:text-sm text-gray-500 mt-2 font-medium">
-                          We'll send you secure access to view the complete report
-                        </p>
-                      </div>
-
-                      {/* Benefits */}
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3">
-                          <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-500 flex-shrink-0" />
-                          <span className="font-medium text-sm sm:text-base text-[#333333]">
-                            Access to all {fakeMatches.length} recent matches
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-500 flex-shrink-0" />
-                          <span className="font-medium text-sm sm:text-base text-[#333333]">
-                            Uncensored photos and conversations
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-500 flex-shrink-0" />
-                          <span className="font-medium text-sm sm:text-base text-[#333333]">
-                            Exact location data and activity timeline
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Submit Button */}
-                      <Button
-                        onClick={submitEmail}
-                        disabled={!userEmail || !userEmail.includes("@") || isSubmittingEmail}
-                        className={`w-full py-3 sm:py-4 text-base sm:text-lg font-bold rounded-xl transition-all duration-300 touch-manipulation ${
-                          userEmail && userEmail.includes("@") && !isSubmittingEmail
-                            ? "bg-gradient-to-r from-[#FF0066] to-[#FF3333] hover:from-[#FF0066] hover:to-[#FF3333] text-white shadow-xl hover:shadow-2xl transform hover:scale-105"
-                            : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        }`}
-                      >
-                        {isSubmittingEmail ? (
-                          <div className="flex items-center justify-center gap-2">
-                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                            SECURING ACCESS...
-                          </div>
-                        ) : (
-                          "🔓 SECURE MY REPORT ACCESS"
-                        )}
-                      </Button>
-
-                      <p className="text-xs sm:text-sm text-gray-500 text-center flex items-center justify-center gap-2 font-medium">
-                        <Shield className="w-4 h-4 sm:w-5 sm:h-5" />🔒 Your email is encrypted and secure
-                      </p>
-                    </CardContent>
-                  </Card>
+                    ) : (
+                      "🔓 UNLOCK REPORT NOW"
+                    )}
+                  </Button>
+                  <p className="text-xs text-gray-500 mt-4 font-medium">Limited time offer only.</p>
                 </div>
               </div>
             </motion.div>
