@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
@@ -17,6 +19,8 @@ import {
   Eye,
   CheckCircle,
   X,
+  Upload,
+  Mail,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -24,7 +28,7 @@ import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { useGeolocation } from "@/hooks/useGeolocation"
 
-type AppStep = "landing" | "form" | "verification" | "preliminary" | "generating" | "result" | "offer"
+type AppStep = "landing" | "form" | "verification" | "preliminary" | "generating" | "result" | "email" | "offer"
 
 // Updated sales proof messages without specific cities/states
 const SalesProofPopup = ({ show, onClose }: { show: boolean; onClose: () => void }) => {
@@ -81,6 +85,9 @@ export default function SigiloX() {
   const [selectedGender, setSelectedGender] = useState("")
   const [lastTinderUse, setLastTinderUse] = useState("")
   const [cityChange, setCityChange] = useState("")
+  const [selectedAgeRange, setSelectedAgeRange] = useState("")
+  const [uploadedPhoto, setUploadedPhoto] = useState<string | null>(null)
+  const [userEmail, setUserEmail] = useState("")
   const [isLoadingPhoto, setIsLoadingPhoto] = useState(false)
   const [photoError, setPhotoError] = useState("")
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null)
@@ -94,6 +101,8 @@ export default function SigiloX() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [showSalesProof, setShowSalesProof] = useState(false)
   const [currentSlide, setCurrentSlide] = useState(0)
+  const [isProcessingPhoto, setIsProcessingPhoto] = useState(false)
+  const [isSubmittingEmail, setIsSubmittingEmail] = useState(false)
 
   const [selectedCountry, setSelectedCountry] = useState({
     code: "+1",
@@ -194,6 +203,60 @@ export default function SigiloX() {
     "ye1f2t",
   ]
 
+  // Fake matches data for interactive report
+  const fakeMatches = [
+    {
+      id: 1,
+      name: "Jessica",
+      age: 28,
+      lastSeen: "2 hours ago",
+      image:
+        "https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=687&q=80",
+      description: "Active conversation - 15 messages exchanged",
+      chatPreview: "Hey! How was your weekend? 😊",
+    },
+    {
+      id: 2,
+      name: "Amanda",
+      age: 32,
+      lastSeen: "1 day ago",
+      image:
+        "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
+      description: "Recent match - Photos exchanged",
+      chatPreview: "Thanks for the compliment! Want to meet up?",
+    },
+    {
+      id: 3,
+      name: "Sarah",
+      age: 26,
+      lastSeen: "3 hours ago",
+      image:
+        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fHx8fA%3D%3D&auto=format&fit=crop&w=688&q=80",
+      description: "Very active - 32 messages today",
+      chatPreview: "I'm free tonight if you want to grab drinks",
+    },
+    {
+      id: 4,
+      name: "Emily",
+      age: 30,
+      lastSeen: "5 hours ago",
+      image:
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fHx8fA%3D%3D&auto=format&fit=crop&w=764&q=80",
+      description: "Intimate photos shared - Private conversation",
+      chatPreview: "Can't wait to see you again... 💋",
+    },
+    {
+      id: 5,
+      name: "Rachel",
+      age: 29,
+      lastSeen: "Today",
+      image:
+        "https://images.unsplash.com/photo-1517841905240-472988babdf9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fHx8fA%3D%3D&auto=format&fit=crop&w=687&q=80",
+      description: "Planning to meet - Location shared",
+      chatPreview: "See you at 8pm at the restaurant we talked about",
+    },
+  ]
+
   // Progress steps for global progress bar
   const getProgressSteps = () => {
     const steps = [
@@ -202,28 +265,37 @@ export default function SigiloX() {
         label: "Config",
         fullLabel: "Configuration",
         mobileLabel: "Config",
-        completed: ["form", "verification", "preliminary", "generating", "result", "offer"].includes(currentStep),
+        completed: ["form", "verification", "preliminary", "generating", "result", "email", "offer"].includes(
+          currentStep,
+        ),
       },
       {
         id: "verification",
         label: "Verif",
         fullLabel: "Verification",
         mobileLabel: "Verif",
-        completed: ["verification", "preliminary", "generating", "result", "offer"].includes(currentStep),
+        completed: ["verification", "preliminary", "generating", "result", "email", "offer"].includes(currentStep),
       },
       {
         id: "preliminary",
         label: "Result",
         fullLabel: "Result",
         mobileLabel: "Resultado",
-        completed: ["preliminary", "generating", "result", "offer"].includes(currentStep),
+        completed: ["preliminary", "generating", "result", "email", "offer"].includes(currentStep),
       },
       {
         id: "generating",
         label: "Relat",
         fullLabel: "Report",
         mobileLabel: "Relatório",
-        completed: ["generating", "result", "offer"].includes(currentStep),
+        completed: ["generating", "result", "email", "offer"].includes(currentStep),
+      },
+      {
+        id: "email",
+        label: "Email",
+        fullLabel: "Email",
+        mobileLabel: "Email",
+        completed: ["email", "offer"].includes(currentStep),
       },
       {
         id: "offer",
@@ -238,7 +310,7 @@ export default function SigiloX() {
 
   // Timer countdown
   useEffect(() => {
-    if (currentStep === "result" || currentStep === "offer") {
+    if (currentStep === "result" || currentStep === "email" || currentStep === "offer") {
       const timer = setInterval(() => {
         setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0))
       }, 1000)
@@ -252,8 +324,8 @@ export default function SigiloX() {
       const messages = [
         { progress: 0, message: "Connecting to Tinder servers..." },
         { progress: 15, message: "Accessing profile information..." },
-        { progress: 30, message: "Decrypting activity data..." },
-        { progress: 45, message: "Locating geographic coordinates..." },
+        { progress: 30, message: "Processing uploaded photo with AI..." },
+        { progress: 45, message: "Detecting facial similarity patterns..." },
         { progress: 60, message: "Cross-referencing with global records..." },
         { progress: 75, message: "Analyzing behavior patterns..." },
         { progress: 90, message: "Compiling confidential information..." },
@@ -324,7 +396,12 @@ export default function SigiloX() {
 
   // Updated sales proof effect - now includes generating step
   useEffect(() => {
-    if (currentStep === "generating" || currentStep === "result" || currentStep === "offer") {
+    if (
+      currentStep === "generating" ||
+      currentStep === "result" ||
+      currentStep === "email" ||
+      currentStep === "offer"
+    ) {
       const showProof = () => {
         if (Math.random() < 0.7) {
           setShowSalesProof(true)
@@ -426,6 +503,58 @@ export default function SigiloX() {
     }
   }
 
+  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      setIsProcessingPhoto(true)
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setUploadedPhoto(e.target?.result as string)
+        // Simulate AI processing
+        setTimeout(() => {
+          setIsProcessingPhoto(false)
+        }, 2000)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const submitEmail = async () => {
+    if (!userEmail || !userEmail.includes("@")) return
+
+    setIsSubmittingEmail(true)
+
+    try {
+      const response = await fetch(
+        "https://get.emailserverside.com/webhook/f8fdd459bd78e07f21b57367b7fb22616708a456ffd0d659da0ffedc32860ae7",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            tag: "tinder check en - usuario criado",
+            evento: "Usuário Criado",
+            email: userEmail,
+          }),
+        },
+      )
+
+      // Continue to offer regardless of webhook response
+      setTimeout(() => {
+        setCurrentStep("offer")
+        setIsSubmittingEmail(false)
+      }, 1500)
+    } catch (error) {
+      console.error("Error submitting email:", error)
+      // Continue to offer even if webhook fails
+      setTimeout(() => {
+        setCurrentStep("offer")
+        setIsSubmittingEmail(false)
+      }, 1500)
+    }
+  }
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (showCountryDropdown) {
@@ -470,7 +599,14 @@ export default function SigiloX() {
     }
   }, [currentStep])
 
-  const canVerify = phoneNumber.length >= 10 && selectedGender && profilePhoto && lastTinderUse && cityChange
+  const canVerify =
+    phoneNumber.length >= 10 &&
+    selectedGender &&
+    profilePhoto &&
+    lastTinderUse &&
+    cityChange &&
+    selectedAgeRange &&
+    uploadedPhoto
 
   return (
     <div className="min-h-screen" style={{ fontFamily: "Inter, -apple-system, BlinkMacSystemFont, sans-serif" }}>
@@ -512,9 +648,13 @@ export default function SigiloX() {
 
       {/* Sales Proof Popup - Dynamic Social Proof */}
       <AnimatePresence>
-        {showSalesProof && (currentStep === "generating" || currentStep === "result" || currentStep === "offer") && (
-          <SalesProofPopup show={showSalesProof} onClose={() => setShowSalesProof(false)} />
-        )}
+        {showSalesProof &&
+          (currentStep === "generating" ||
+            currentStep === "result" ||
+            currentStep === "email" ||
+            currentStep === "offer") && (
+            <SalesProofPopup show={showSalesProof} onClose={() => setShowSalesProof(false)} />
+          )}
       </AnimatePresence>
 
       <div className={currentStep !== "landing" ? "pt-16 sm:pt-20" : ""}>
@@ -583,7 +723,7 @@ export default function SigiloX() {
                     transition={{ delay: 0.4 }}
                     className="text-[#CCCCCC] mb-6 text-base sm:text-lg md:text-xl px-4 max-w-3xl mx-auto font-medium"
                   >
-                    Dating app tracking technology. 100% confidential.
+                    Advanced AI-powered dating app tracking technology. 100% confidential.
                   </motion.p>
                   <motion.div
                     initial={{ y: 20, opacity: 0 }}
@@ -592,7 +732,7 @@ export default function SigiloX() {
                     className="inline-flex items-center gap-2 bg-green-600/20 text-green-300 px-4 sm:px-6 py-2 sm:py-3 rounded-full text-sm mt-4 border border-green-500/30"
                   >
                     <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
-                    <span className="font-medium">System Updated - June 2025</span>
+                    <span className="font-medium">AI System Updated - June 2025</span>
                   </motion.div>
                 </div>
 
@@ -603,6 +743,10 @@ export default function SigiloX() {
                   transition={{ delay: 0.8 }}
                   className="max-w-2xl mx-auto space-y-3 sm:space-y-4 mb-8 sm:mb-12 px-4"
                 >
+                  <div className="flex items-center gap-3 sm:gap-4 bg-white/10 backdrop-blur-sm text-white px-4 sm:px-6 py-3 sm:py-4 rounded-2xl border border-white/20 hover:bg-white/15 transition-all duration-300">
+                    <Camera className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0 text-[#00FF99]" />
+                    <span className="font-semibold text-sm sm:text-base">✅ AI FACIAL RECOGNITION SEARCH</span>
+                  </div>
                   <div className="flex items-center gap-3 sm:gap-4 bg-white/10 backdrop-blur-sm text-white px-4 sm:px-6 py-3 sm:py-4 rounded-2xl border border-white/20 hover:bg-white/15 transition-all duration-300">
                     <Activity className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0 text-[#00FF99]" />
                     <span className="font-semibold text-sm sm:text-base">✅ RECENT ACTIVITY ANALYSIS</span>
@@ -634,10 +778,10 @@ export default function SigiloX() {
                     onClick={() => setCurrentStep("form")}
                     className="bg-gradient-to-r from-[#FF0066] to-[#FF3333] hover:from-[#FF0066] hover:to-[#FF3333] text-white font-bold py-4 sm:py-6 px-8 sm:px-12 text-base sm:text-lg rounded-2xl shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300 w-full max-w-md touch-manipulation"
                   >
-                    🚨 START CONFIDENTIAL DETECTION
+                    🚨 START AI DETECTION
                   </Button>
                   <p className="text-sm text-gray-300 mt-4 font-medium">
-                    Real-time technology. Total secrecy guaranteed.
+                    Advanced AI technology. Total secrecy guaranteed.
                   </p>
                 </motion.div>
               </div>
@@ -697,12 +841,12 @@ export default function SigiloX() {
                       {/* Anna's Testimonial */}
                       <div className="testimonial-card bg-white rounded-xl shadow-lg p-4 sm:p-5 flex items-start gap-4">
                         <img
-                          src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHx8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80"
+                          src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80"
                           alt="Foto de Anna"
                           className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover flex-shrink-0 border-2 border-gray-200 shadow-sm"
                           onError={(e) => {
                             e.currentTarget.src =
-                              "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHx8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80"
+                              "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80"
                           }}
                         />
                         <div className="flex-1 min-w-0 text-left">
@@ -719,8 +863,8 @@ export default function SigiloX() {
                               <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h4v10h-10z" />
                             </svg>
                             <p className="text-[#444444] text-base sm:text-lg leading-relaxed font-normal">
-                              I thought he had uninstalled Tinder... But after the analysis, I saw he was still liking
-                              other women's profiles. It was a shock… But at least now I know the truth.
+                              I thought he had uninstalled Tinder... But after the AI analysis, I saw he was still
+                              liking other women's profiles. It was a shock… But at least now I know the truth.
                             </p>
                           </div>
                           <div className="flex items-center text-[#FFD700] text-sm sm:text-base gap-1">
@@ -732,12 +876,12 @@ export default function SigiloX() {
                       {/* Charles's Testimonial */}
                       <div className="testimonial-card bg-white rounded-xl shadow-lg p-4 sm:p-5 flex items-start gap-4">
                         <img
-                          src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHx8fHx8fA%3D%3D&auto=format&fit=crop&w=687&q=80"
+                          src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fHx8fA%3D%3D&auto=format&fit=crop&w=687&q=80"
                           alt="Foto de Charles"
                           className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover flex-shrink-0 border-2 border-gray-200 shadow-sm"
                           onError={(e) => {
                             e.currentTarget.src =
-                              "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80"
+                              "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80"
                           }}
                         />
                         <div className="flex-1 min-w-0 text-left">
@@ -754,7 +898,7 @@ export default function SigiloX() {
                               <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h4v10h-10z" />
                             </svg>
                             <p className="text-[#444444] text-base sm:text-lg leading-relaxed font-normal">
-                              I was suspicious, but never had certainty... When I saw the report showing recent
+                              I was suspicious, but never had certainty... When I saw the AI report showing recent
                               conversations, it hit me. I didn't want to believe it... But the data doesn't lie.
                             </p>
                           </div>
@@ -767,12 +911,12 @@ export default function SigiloX() {
                       {/* Felicity's Testimonial */}
                       <div className="testimonial-card bg-white rounded-xl shadow-lg p-4 sm:p-5 flex items-start gap-4">
                         <img
-                          src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8MHx8fHx8fA%3D%3D&auto=format&fit=crop&w=688&q=80"
+                          src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fHx8fA%3D%3D&auto=format&fit=crop&w=688&q=80"
                           alt="Foto de Felicity"
                           className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover flex-shrink-0 border-2 border-gray-200 shadow-sm"
                           onError={(e) => {
                             e.currentTarget.src =
-                              "https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fHx8fA%3D%3D&auto=format&fit=crop&w=764&q=80"
+                              "https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fHx8fA%3D%3D&auto=format&fit=crop&w=764&q=80"
                           }}
                         />
                         <div className="flex-1 min-w-0 text-left">
@@ -789,7 +933,7 @@ export default function SigiloX() {
                               <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h4v10h-10z" />
                             </svg>
                             <p className="text-[#444444] text-base sm:text-lg leading-relaxed font-normal">
-                              I always trusted him... Until I started noticing some changes. I did the analysis on
+                              I always trusted him... Until I started noticing some changes. I did the AI analysis on
                               impulse... And what I found left me speechless. But I'd rather know the truth than live in
                               doubt.
                             </p>
@@ -822,7 +966,7 @@ export default function SigiloX() {
             </motion.div>
           )}
 
-          {/* Form - Mobile Optimized */}
+          {/* Form - Mobile Optimized with Photo Upload and Age Range */}
           {currentStep === "form" && (
             <motion.div
               key="form"
@@ -862,10 +1006,10 @@ export default function SigiloX() {
                       <Wifi className="w-8 h-8 sm:w-10 sm:h-10 text-[#6C63FF]" />
                     </div>
                     <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-3 sm:mb-4">
-                      📡 CONFIGURING SEARCH PARAMETERS
+                      🤖 AI SEARCH CONFIGURATION
                     </h1>
                     <p className="text-gray-200 text-sm sm:text-base px-4 leading-relaxed">
-                      To ensure accurate profile analysis, we need some technical information about the number to be
+                      To ensure accurate AI analysis, we need some technical information about the person to be
                       verified:
                     </p>
                   </div>
@@ -873,6 +1017,82 @@ export default function SigiloX() {
                   {/* Form */}
                   <Card className="bg-white rounded-2xl shadow-lg border-0">
                     <CardContent className="p-4 sm:p-8 space-y-6 sm:space-y-8">
+                      {/* Photo Upload */}
+                      <div>
+                        <label className="block text-sm sm:text-base font-semibold text-[#333333] mb-2 sm:mb-3">
+                          Upload Photo for AI Recognition
+                        </label>
+                        <div className="text-center">
+                          {uploadedPhoto ? (
+                            <div className="relative inline-block">
+                              <img
+                                src={uploadedPhoto || "/placeholder.svg"}
+                                alt="Uploaded"
+                                className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border-4 border-green-500 shadow-lg"
+                              />
+                              {isProcessingPhoto && (
+                                <div className="absolute inset-0 bg-black bg-opacity-50 rounded-2xl flex items-center justify-center">
+                                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div
+                              onClick={() => fileInputRef.current?.click()}
+                              className="w-24 h-24 sm:w-28 sm:h-28 border-2 border-dashed border-gray-300 rounded-2xl flex items-center justify-center mx-auto cursor-pointer hover:border-[#6C63FF] transition-colors duration-200"
+                            >
+                              <div className="text-center">
+                                <Upload className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400 mx-auto mb-2" />
+                                <p className="text-xs sm:text-sm text-gray-500 font-medium">Click to upload photo</p>
+                              </div>
+                            </div>
+                          )}
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handlePhotoUpload}
+                            className="hidden"
+                          />
+                        </div>
+                        <p className="text-xs sm:text-sm text-gray-500 mt-2 font-medium text-center">
+                          Your image is processed only for visual verification and is never stored.
+                        </p>
+                      </div>
+
+                      {/* Age Range Selection */}
+                      <div>
+                        <label className="block text-sm sm:text-base font-semibold text-[#333333] mb-3 sm:mb-4">
+                          Target Age Range
+                        </label>
+                        <div className="grid grid-cols-1 gap-2 sm:gap-3">
+                          {[
+                            { id: "25-34", label: "25-34 years old" },
+                            { id: "35-44", label: "35-44 years old" },
+                            { id: "45-54", label: "45-54 years old" },
+                          ].map((option) => (
+                            <button
+                              key={option.id}
+                              onClick={() => setSelectedAgeRange(option.id)}
+                              className={`p-3 sm:p-4 text-left rounded-xl border-2 transition-all duration-200 hover:shadow-lg touch-manipulation ${
+                                selectedAgeRange === option.id
+                                  ? "border-blue-500 bg-blue-50 shadow-lg"
+                                  : "border-gray-200 hover:border-gray-300 bg-white"
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 flex-shrink-0 transition-all duration-200 ${
+                                    selectedAgeRange === option.id ? "bg-blue-500 border-blue-500" : "border-gray-300"
+                                  }`}
+                                />
+                                <span className="font-medium text-sm sm:text-base">{option.label}</span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
                       {/* Phone Number */}
                       <div>
                         <label className="block text-sm sm:text-base font-semibold text-[#333333] mb-2 sm:mb-3">
@@ -883,7 +1103,8 @@ export default function SigiloX() {
                             <button
                               type="button"
                               onClick={() => setShowCountryDropdown(!showCountryDropdown)}
-                              className="bg-gray-100 px-3 sm:px-4 py-2 sm:py-3 rounded-xl border text-gray-600 flex-shrink-0 font-medium text-sm sm:text-base flex items-center gap-2 hover:bg-gray-200 transition-colors duration-200 min-w-[80px] sm:min-w-[90px]"
+                              className="bg-gray-100 px-3 sm:px-4 py-2 sm:py-3 rounded-xl border text-gray-600 flex-shrink-0 font-medium text-sm sm:text-base flex items-center gap-2 hover:bg-gray-200 transition-colors duration-200 min-w-[80px] sm:min-w-[9
+0px]"
                             >
                               <span className="text-lg">{selectedCountry.flag}</span>
                               <span>{selectedCountry.code}</span>
@@ -1095,7 +1316,7 @@ export default function SigiloX() {
                             : "bg-gray-300 text-gray-500 cursor-not-allowed"
                         }`}
                       >
-                        🔎 START PROFILE ANALYSIS
+                        🤖 START AI ANALYSIS
                       </Button>
 
                       <p className="text-xs sm:text-sm text-gray-500 text-center flex items-center justify-center gap-2 font-medium">
@@ -1148,7 +1369,13 @@ export default function SigiloX() {
                 <Card className="bg-gray-900 border-2 border-[#00FF00] rounded-2xl shadow-2xl">
                   <CardContent className="p-6 sm:p-8 text-center">
                     <div className="mb-6 sm:mb-8">
-                      {profilePhoto ? (
+                      {uploadedPhoto ? (
+                        <img
+                          src={uploadedPhoto || "/placeholder.svg"}
+                          alt="Uploaded"
+                          className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl mx-auto border-4 border-[#00FF00] shadow-lg"
+                        />
+                      ) : profilePhoto ? (
                         <img
                           src={profilePhoto || "/placeholder.svg"}
                           alt="Profile"
@@ -1162,7 +1389,7 @@ export default function SigiloX() {
                     </div>
 
                     <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-3 sm:mb-4">
-                      VERIFYING NOW...
+                      AI ANALYZING...
                     </h2>
                     <p className="text-[#00FF00] mb-6 sm:mb-8 text-sm sm:text-base font-medium px-2">
                       {verificationMessage}
@@ -1239,18 +1466,18 @@ export default function SigiloX() {
                     </motion.div>
 
                     <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#333333] mb-4 sm:mb-6">
-                      🟢 Preliminary Analysis Completed!
+                      🟢 AI Analysis Completed!
                     </h2>
                     <p className="text-gray-700 mb-6 sm:mb-8 leading-relaxed text-sm sm:text-base px-2">
-                      The system identified{" "}
+                      The AI system identified{" "}
                       <span className="text-[#D8000C] font-bold">signs of suspicious activity</span> linked to the
-                      provided number.
+                      provided number matching your age range ({selectedAgeRange} years).
                     </p>
 
                     <div className="bg-yellow-100 border-2 border-yellow-400 rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8">
                       <p className="text-yellow-800 text-sm sm:text-base font-medium">
-                        👉 <strong>Next step:</strong> Generating complete report of photos, conversations and
-                        locations...
+                        👉 <strong>Next step:</strong> Generating complete interactive report with matches, photos,
+                        conversations and locations...
                       </p>
                     </div>
 
@@ -1258,7 +1485,7 @@ export default function SigiloX() {
                       onClick={() => setCurrentStep("generating")}
                       className="w-full bg-gradient-to-r from-[#FF0066] to-[#FF3333] hover:from-[#FF0066] hover:to-[#FF3333] text-white font-bold py-3 sm:py-4 text-base sm:text-lg rounded-xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 touch-manipulation"
                     >
-                      📊 GENERATE COMPLETE REPORT
+                      📊 GENERATE INTERACTIVE REPORT
                     </Button>
 
                     <div className="mt-6 sm:mt-8 flex items-center justify-center gap-2 sm:gap-3 text-green-600 text-sm sm:text-base font-medium">
@@ -1320,7 +1547,7 @@ export default function SigiloX() {
                     </div>
 
                     <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-3 sm:mb-4">
-                      BUILDING REPORT...
+                      BUILDING INTERACTIVE REPORT...
                     </h2>
                     <p className="text-blue-400 mb-6 sm:mb-8 text-sm sm:text-base font-medium px-2">
                       {generatingMessage}
@@ -1340,7 +1567,7 @@ export default function SigiloX() {
                     <div className="space-y-2 sm:space-y-3 text-xs sm:text-sm text-gray-400">
                       <div className="flex items-center justify-center gap-2 sm:gap-3">
                         <Shield className="w-4 h-4 sm:w-5 sm:h-5" />
-                        <span className="font-medium">Advanced processing in progress</span>
+                        <span className="font-medium">Advanced AI processing in progress</span>
                       </div>
                       <p className="font-medium">Estimated time: {Math.ceil((100 - generatingProgress) / 3)} seconds</p>
                     </div>
@@ -1350,7 +1577,7 @@ export default function SigiloX() {
             </motion.div>
           )}
 
-          {/* Result - Mobile Optimized */}
+          {/* Interactive Result - Mobile Optimized */}
           {currentStep === "result" && (
             <motion.div
               key="result"
@@ -1370,29 +1597,59 @@ export default function SigiloX() {
                   <div className="flex items-center gap-2 sm:gap-3">
                     <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse flex-shrink-0" />
                     <div>
-                      <strong className="font-bold text-base sm:text-lg">PROFILE FOUND!</strong>
-                      <p className="text-xs sm:text-sm opacity-90">They are active on Tinder.</p>
+                      <strong className="font-bold text-base sm:text-lg">ACTIVE PROFILE FOUND!</strong>
+                      <p className="text-xs sm:text-sm opacity-90">
+                        They are active on Tinder with {fakeMatches.length} recent matches.
+                      </p>
                     </div>
                   </div>
                 </motion.div>
 
-                {/* Warning */}
-                <Card className="bg-[#FF3B30] text-white mb-4 sm:mb-6 rounded-2xl border-0 shadow-xl">
-                  <CardContent className="p-4 sm:p-6">
-                    <div className="flex items-center gap-2 sm:gap-3 mb-3">
-                      <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0 animate-pulse" />
-                      <span className="font-bold text-base sm:text-lg">ATTENTION: ACTIVE PROFILE FOUND!</span>
-                    </div>
-                    <p className="text-sm opacity-90">We confirm this number is linked to an ACTIVE Tinder profile.</p>
-                    {/* Geolocation info */}
-                    {city && (
-                      <p className="text-xs sm:text-sm opacity-90 mt-2 font-medium">
-                        Latest usage records detected in{" "}
-                        <span className="text-yellow-300 font-bold underline">{city}</span>.
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
+                {/* Interactive Matches Cards */}
+                <div className="space-y-4 mb-6">
+                  <h3 className="text-lg sm:text-xl font-bold text-[#333333] text-center mb-4">
+                    🔥 RECENT MATCHES FOUND ({selectedAgeRange} age range)
+                  </h3>
+
+                  {fakeMatches.slice(0, 3).map((match, index) => (
+                    <motion.div
+                      key={match.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.2 }}
+                      className="bg-white rounded-2xl shadow-lg p-4 border-l-4 border-red-500"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="relative">
+                          <img
+                            src={match.image || "/placeholder.svg"}
+                            alt={match.name}
+                            className="w-16 h-16 rounded-xl object-cover"
+                            style={{ filter: "blur(8px)" }}
+                          />
+                          <div className="absolute inset-0 bg-black bg-opacity-40 rounded-xl flex items-center justify-center">
+                            <Lock className="w-6 h-6 text-white" />
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-bold text-gray-900">
+                              {match.name}, {match.age}
+                            </h4>
+                            <span className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full font-medium">
+                              ACTIVE
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600 mb-2">{match.description}</p>
+                          <div className="bg-gray-100 p-2 rounded-lg">
+                            <p className="text-xs text-gray-700 italic">"{match.chatPreview}"</p>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">Last seen: {match.lastSeen}</p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
 
                 {/* Blocked Photos */}
                 <Card className="bg-gray-900 text-white mb-4 sm:mb-6 rounded-2xl border-0 shadow-xl">
@@ -1466,7 +1723,10 @@ export default function SigiloX() {
                       </div>
                     </div>
 
-                    <Button className="w-full bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white font-bold py-2 sm:py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 touch-manipulation">
+                    <Button
+                      onClick={() => setCurrentStep("email")}
+                      className="w-full bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white font-bold py-2 sm:py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 touch-manipulation"
+                    >
                       👁️ VIEW COMPLETE PHOTOS NOW
                     </Button>
                   </CardContent>
@@ -1495,7 +1755,7 @@ export default function SigiloX() {
                 <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
                   <Card className="rounded-2xl border-0 shadow-lg">
                     <CardContent className="p-3 sm:p-4 text-center">
-                      <div className="text-xl sm:text-2xl font-bold text-[#FF0066]">6</div>
+                      <div className="text-xl sm:text-2xl font-bold text-[#FF0066]">{fakeMatches.length}</div>
                       <div className="text-[0.6rem] sm:text-xs text-gray-600 font-medium">MATCHES (7 DAYS)</div>
                     </CardContent>
                   </Card>
@@ -1525,7 +1785,9 @@ export default function SigiloX() {
                       <div className="flex items-center gap-3 p-3 bg-pink-50 rounded-2xl border border-pink-200">
                         <Heart className="w-6 h-6 sm:w-8 sm:h-8 text-[#FF0066] flex-shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-sm text-[#333333]">Matched with 6 people</div>
+                          <div className="font-semibold text-sm text-[#333333]">
+                            Matched with {fakeMatches.length} people
+                          </div>
                           <div className="text-xs text-gray-600">Last 7 days • Very active</div>
                         </div>
                         <span className="bg-[#FF3B30] text-white text-[0.6rem] px-2 py-1 rounded-full font-bold flex-shrink-0">
@@ -1569,7 +1831,7 @@ export default function SigiloX() {
                   </CardContent>
                 </Card>
 
-                {/* CTA - Offer */}
+                {/* CTA - Email Capture */}
                 <div className="text-center">
                   <h3 className="text-lg sm:text-xl font-bold text-[#333333] mb-2 sm:mb-3">
                     UNLOCK THE COMPLETE REPORT
@@ -1578,12 +1840,142 @@ export default function SigiloX() {
                     See photos, conversations and exact location of the profile.
                   </p>
                   <Button
-                    onClick={() => setCurrentStep("offer")}
+                    onClick={() => setCurrentStep("email")}
                     className="bg-gradient-to-r from-[#FF0066] to-[#FF3333] hover:from-[#FF0066] hover:to-[#FF3333] text-white font-bold py-3 sm:py-4 px-6 sm:px-8 text-base sm:text-lg rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 w-full touch-manipulation"
                   >
                     🔓 UNLOCK REPORT NOW
                   </Button>
                   <p className="text-xs text-gray-500 mt-4 font-medium">Limited time offer only.</p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Email Capture Step */}
+          {currentStep === "email" && (
+            <motion.div
+              key="email"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="min-h-screen bg-gradient-to-br from-[#FF3B30] to-[#FF0066] relative overflow-hidden"
+            >
+              {/* Floating hearts - Reduced for mobile */}
+              <div className="absolute inset-0">
+                {[...Array(10)].map((_, i) => (
+                  <motion.div
+                    key={i}
+                    className="absolute w-4 h-4 bg-white rounded-full opacity-20"
+                    style={{
+                      left: `${Math.random() * 100}%`,
+                      top: `${Math.random() * 100}%`,
+                    }}
+                    animate={{
+                      scale: [1, 1.5, 1],
+                      opacity: [0.2, 0.6, 0.2],
+                      y: [0, -20, 0],
+                    }}
+                    transition={{
+                      duration: 3 + Math.random() * 2,
+                      repeat: Number.POSITIVE_INFINITY,
+                      delay: Math.random() * 2,
+                    }}
+                  />
+                ))}
+              </div>
+
+              <div className="relative z-10 container mx-auto px-4 py-6 sm:py-8 flex items-center justify-center min-h-screen">
+                <div className="w-full max-w-lg">
+                  {/* Header */}
+                  <div className="text-center mb-6 sm:mb-8">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-2xl">
+                      <Mail className="w-8 h-8 sm:w-10 sm:h-10 text-[#FF0066]" />
+                    </div>
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-3 sm:mb-4">
+                      📧 SECURE YOUR REPORT ACCESS
+                    </h1>
+                    <p className="text-gray-200 text-sm sm:text-base px-4 leading-relaxed">
+                      Enter your email to receive secure access to the complete report with all matches, photos and
+                      conversations.
+                    </p>
+                  </div>
+
+                  {/* Email Form */}
+                  <Card className="bg-white rounded-2xl shadow-lg border-0">
+                    <CardContent className="p-4 sm:p-8 space-y-6 sm:space-y-8">
+                      {/* Timer */}
+                      <div className="bg-red-100 border-2 border-red-400 rounded-2xl p-4 text-center">
+                        <div className="flex items-center justify-center gap-2 mb-2">
+                          <AlertTriangle className="w-5 h-5 text-red-600 animate-bounce" />
+                          <span className="font-bold text-red-800">REPORT EXPIRES IN:</span>
+                        </div>
+                        <div className="text-2xl font-bold text-red-600">{formatTime(timeLeft)}</div>
+                      </div>
+
+                      {/* Email Input */}
+                      <div>
+                        <label className="block text-sm sm:text-base font-semibold text-[#333333] mb-2 sm:mb-3">
+                          Email Address
+                        </label>
+                        <Input
+                          type="email"
+                          placeholder="your.email@example.com"
+                          value={userEmail}
+                          onChange={(e) => setUserEmail(e.target.value)}
+                          className="rounded-xl border-2 border-gray-200 focus:border-[#FF0066] transition-colors duration-200 py-2 sm:py-3 px-3 sm:px-4 text-sm sm:text-base"
+                        />
+                        <p className="text-xs sm:text-sm text-gray-500 mt-2 font-medium">
+                          We'll send you secure access to view the complete report
+                        </p>
+                      </div>
+
+                      {/* Benefits */}
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-500 flex-shrink-0" />
+                          <span className="font-medium text-sm sm:text-base text-[#333333]">
+                            Access to all {fakeMatches.length} recent matches
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-500 flex-shrink-0" />
+                          <span className="font-medium text-sm sm:text-base text-[#333333]">
+                            Uncensored photos and conversations
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-500 flex-shrink-0" />
+                          <span className="font-medium text-sm sm:text-base text-[#333333]">
+                            Exact location data and activity timeline
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Submit Button */}
+                      <Button
+                        onClick={submitEmail}
+                        disabled={!userEmail || !userEmail.includes("@") || isSubmittingEmail}
+                        className={`w-full py-3 sm:py-4 text-base sm:text-lg font-bold rounded-xl transition-all duration-300 touch-manipulation ${
+                          userEmail && userEmail.includes("@") && !isSubmittingEmail
+                            ? "bg-gradient-to-r from-[#FF0066] to-[#FF3333] hover:from-[#FF0066] hover:to-[#FF3333] text-white shadow-xl hover:shadow-2xl transform hover:scale-105"
+                            : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        }`}
+                      >
+                        {isSubmittingEmail ? (
+                          <div className="flex items-center justify-center gap-2">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                            SECURING ACCESS...
+                          </div>
+                        ) : (
+                          "🔓 SECURE MY REPORT ACCESS"
+                        )}
+                      </Button>
+
+                      <p className="text-xs sm:text-sm text-gray-500 text-center flex items-center justify-center gap-2 font-medium">
+                        <Shield className="w-4 h-4 sm:w-5 sm:h-5" />🔒 Your email is encrypted and secure
+                      </p>
+                    </CardContent>
+                  </Card>
                 </div>
               </div>
             </motion.div>
@@ -1633,7 +2025,7 @@ export default function SigiloX() {
                       🔒 UNLOCK THE COMPLETE REPORT
                     </h1>
                     <p className="text-gray-200 text-sm sm:text-base px-4 leading-relaxed">
-                      See photos, conversations and exact location of the profile.
+                      See all {fakeMatches.length} matches, photos, conversations and exact location of the profile.
                     </p>
                   </div>
 
@@ -1650,7 +2042,7 @@ export default function SigiloX() {
                           </div>
                         </div>
                         <p className="text-sm sm:text-base text-gray-500 font-medium">
-                          Unique and lifetime access to the complete report.
+                          Unique and lifetime access to the complete interactive report.
                         </p>
                       </div>
 
@@ -1659,7 +2051,7 @@ export default function SigiloX() {
                         <div className="flex items-center gap-3">
                           <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-500 flex-shrink-0" />
                           <span className="font-medium text-sm sm:text-base text-[#333333]">
-                            See all profile photos (including private ones)
+                            See all {fakeMatches.length} profile matches (including private ones)
                           </span>
                         </div>
                         <div className="flex items-center gap-3">
@@ -1672,6 +2064,12 @@ export default function SigiloX() {
                           <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-500 flex-shrink-0" />
                           <span className="font-medium text-sm sm:text-base text-[#333333]">
                             Discover exact location (and where they're scheduling dates)
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-500 flex-shrink-0" />
+                          <span className="font-medium text-sm sm:text-base text-[#333333]">
+                            AI-powered analysis for {selectedAgeRange} age range
                           </span>
                         </div>
                       </div>
